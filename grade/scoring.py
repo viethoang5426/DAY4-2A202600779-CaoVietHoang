@@ -249,12 +249,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Grade saved JSON output for the order-agent lab")
     parser.add_argument("--module", default="solution.agent.graph")
     parser.add_argument("--cases", default=str(ROOT_DIR / "data" / "graded_cases.json"))
-    parser.add_argument("--provider", default="google", choices=["google", "ollama"])
+    parser.add_argument("--provider", default="google", choices=["google", "ollama", "custom"])
     parser.add_argument("--model-name", default=None)
     parser.add_argument("--today", default="2026-06-01")
     parser.add_argument("--pass-threshold", type=float, default=80.0)
-    parser.add_argument("--judge-provider", default=None, choices=["google", "ollama"])
+    parser.add_argument("--judge-provider", default=None, choices=["google", "ollama", "custom"])
     parser.add_argument("--judge-model-name", default=None)
+    parser.add_argument("--case-id", default=None, help="Run only a specific case ID")
     args = parser.parse_args()
 
     module = importlib.import_module(args.module)
@@ -262,6 +263,11 @@ def main() -> int:
         raise SystemExit(f"Module {args.module} does not expose run_agent()")
 
     cases = load_cases(Path(args.cases))
+    if args.case_id:
+        cases = [c for c in cases if c["id"] == args.case_id]
+        if not cases:
+            raise SystemExit(f"No case found with ID: {args.case_id}")
+
     effective_judge_provider = args.judge_provider
     if effective_judge_provider is None and any(case["weights"].get("llm_judge", 0) > 0 for case in cases):
         effective_judge_provider = args.provider
